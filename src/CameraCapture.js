@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import OpenMapButton from './OpenMapButton';
 
 const CameraCapture = () => {
   const [stream, setStream] = useState(null);
@@ -125,6 +126,7 @@ const CameraCapture = () => {
         <div style={styles.locationInfo}>
           <p>Latitude: {location.lat}</p>
           <p>Longitude: {location.lng}</p>
+          <OpenMapButton latitude={location.lat} longitude={location.lng}></OpenMapButton>
         </div>
       )}
 
