@@ -184,7 +184,7 @@ const styles = {
   toggleButtonContainer: {
     display: 'flex',
     alignItems: 'center',
-    marginTop: '20px', // Adding some space for the toggle
+    marginTop: '15px', // Adding some space for the toggle
   },
   toggleButtonLabel: {
     fontSize: '16px',
@@ -205,7 +205,7 @@ const styles = {
   },
   toggleButtonSlider: {
     position: 'absolute',
-    top: '5px',
+    top: '10px',
     width: '40px',
     height: '40px',
     borderRadius: '50%',
