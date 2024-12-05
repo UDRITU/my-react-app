@@ -3,11 +3,26 @@ import OpenMapButton from './OpenMapButton';
 
 const CameraCapture = () => {
   const [stream, setStream] = useState(null);
-  const [currentDevice, setCurrentDevice] = useState(null);
+  //const [currentDevice, setCurrentDevice] = useState(null);
   const [location, setLocation] = useState({ lat: null, lng: null });
   const [capturedImage, setCapturedImage] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const [cameraType, setCameraType] = useState('front'); // 'front' or 'back'
+
+  const toggleCamera = async (cameraType) => {
+    const devices = await getCameraDevices();
+    const nextDevice = devices.find(device =>
+      (cameraType === 'front' && device.label.includes('front')) ||
+      (cameraType === 'back' && device.label.includes('back'))
+    );
+
+    if (nextDevice) {
+      stopCurrentStream();
+      //setCurrentDevice(nextDevice.deviceId);
+      await startStream(nextDevice.deviceId);
+    }
+  };
 
   // Memoize stopCurrentStream to prevent it from changing on every render
   const stopCurrentStream = useCallback(() => {
@@ -38,22 +53,7 @@ const CameraCapture = () => {
     }
   };
 
-  // Switch camera device
-  const toggleCamera = async () => {
-    const devices = await getCameraDevices();
-    const nextDevice = devices.find(device => device.deviceId !== currentDevice);
 
-    if (nextDevice) {
-      // Proper cleanup: stop the current stream first
-      stopCurrentStream();
-      setStream(null); // Optionally reset stream state to avoid flickering
-      videoRef.current.srcObject = null; // Reset the video ref
-
-      // Start the next camera stream
-      setCurrentDevice(nextDevice.deviceId);
-      await startStream(nextDevice.deviceId);
-    }
-  };
 
   // Capture the image from the video stream
   const captureImage = () => {
@@ -91,7 +91,7 @@ const CameraCapture = () => {
     const initializeCamera = async () => {
       const devices = await getCameraDevices();
       if (devices.length > 0) {
-        setCurrentDevice(devices[0].deviceId);
+        //setCurrentDevice(devices[0].deviceId);
         await startStream(devices[0].deviceId);
       }
     };
@@ -99,7 +99,7 @@ const CameraCapture = () => {
     initializeCamera();
     getGeolocation();
 
-   
+
   }, []); // Add stopCurrentStream as a dependency
 
   return (
@@ -114,9 +114,29 @@ const CameraCapture = () => {
         />
       </div>
 
-      <button onClick={toggleCamera} style={styles.toggleButton}>
-        Switch Camera
-      </button>
+
+      {/* Custom Radio Button Slider */}
+      <div style={styles.toggleButtonContainer}>
+       
+        <div
+          style={{
+            ...styles.toggleButton,
+            ...(cameraType === 'front' ? styles.active : styles.inactive)
+          }}
+          onClick={() => {
+            const newCameraType = cameraType === 'front' ? 'back' : 'front';
+            setCameraType(newCameraType);
+            toggleCamera(newCameraType);
+          }}
+        >
+          <div
+            style={{
+              ...styles.toggleButtonSlider,
+              transform: cameraType === 'front' ? 'translateX(50px)' : 'translateX(0)',
+            }}
+          />
+        </div>
+      </div>
 
       <button onClick={captureImage} style={styles.captureButton}>
         Capture Image
@@ -161,27 +181,59 @@ const styles = {
     border: '2px solid #ccc',
     borderRadius: '10px',
   },
-  toggleButton: {
-    marginTop: '10px',
-    padding: '10px 20px',
+  toggleButtonContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    marginTop: '20px', // Adding some space for the toggle
+  },
+  toggleButtonLabel: {
     fontSize: '16px',
-    backgroundColor: '#4CAF50',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
+    marginRight: '10px', // Space between label and the toggle switch
+  },
+  toggleButton: {
+    position: 'relative',
+    width: '100px',
+    height: '50px',
+    borderRadius: '25px',
+    backgroundColor: '#ddd',
     cursor: 'pointer',
     transition: 'background-color 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '5px',
+  },
+  toggleButtonSlider: {
+    position: 'absolute',
+    top: '5px',
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    backgroundColor: 'white',
+    transition: 'transform 0.3s ease',
+  },
+  active: {
+    backgroundColor: '#4CAF50', // Green for Front Camera
+  },
+  inactive: {
+    backgroundColor: '#FF5722', // Orange for Back Camera
   },
   captureButton: {
     marginTop: '10px',
-    padding: '10px 20px',
+    width: '80px', // Set the width and height to make it a circle
+    height: '80px',
+    borderRadius: '50%', // This makes it round
+    padding: '10px', // Optional padding to adjust the size
     fontSize: '16px',
     backgroundColor: '#FF5722',
     color: 'white',
     border: 'none',
-    borderRadius: '5px',
+    display: 'flex',
+    justifyContent: 'center', // Center the text inside the button
+    alignItems: 'center', // Center the text inside the button
     cursor: 'pointer',
     transition: 'background-color 0.3s ease',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
   },
   locationInfo: {
     marginTop: '20px',
