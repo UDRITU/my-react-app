@@ -1,12 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 const CameraCapture = () => {
   const [stream, setStream] = useState(null);
   const [currentDevice, setCurrentDevice] = useState(null);
   const [location, setLocation] = useState({ lat: null, lng: null });
-  const [capturedImage, setCapturedImage] = useState(null); // State to hold the captured image
+  const [capturedImage, setCapturedImage] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
+  // Memoize stopCurrentStream to prevent it from changing on every render
+  const stopCurrentStream = useCallback(() => {
+    if (stream) {
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
+    }
+  }, [stream]);
 
   // Get the available video devices (front and back cameras)
   const getCameraDevices = async () => {
@@ -35,17 +43,14 @@ const CameraCapture = () => {
     const nextDevice = devices.find(device => device.deviceId !== currentDevice);
 
     if (nextDevice) {
-      setCurrentDevice(nextDevice.deviceId);
+      // Proper cleanup: stop the current stream first
       stopCurrentStream();
-      startStream(nextDevice.deviceId);
-    }
-  };
+      setStream(null); // Optionally reset stream state to avoid flickering
+      videoRef.current.srcObject = null; // Reset the video ref
 
-  // Stop the current video stream
-  const stopCurrentStream = () => {
-    if (stream) {
-      const tracks = stream.getTracks();
-      tracks.forEach(track => track.stop());
+      // Start the next camera stream
+      setCurrentDevice(nextDevice.deviceId);
+      await startStream(nextDevice.deviceId);
     }
   };
 
@@ -55,14 +60,12 @@ const CameraCapture = () => {
     const context = canvas.getContext('2d');
     const video = videoRef.current;
 
-    // Set the canvas size based on the video dimensions
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert the captured canvas to a base64 image URL
     const imageData = canvas.toDataURL('image/png');
-    setCapturedImage(imageData); // Set the captured image to the state
+    setCapturedImage(imageData);
   };
 
   // Get geolocation (lat, lng)
@@ -88,18 +91,15 @@ const CameraCapture = () => {
       const devices = await getCameraDevices();
       if (devices.length > 0) {
         setCurrentDevice(devices[0].deviceId);
-        startStream(devices[0].deviceId);
+        await startStream(devices[0].deviceId);
       }
     };
 
     initializeCamera();
     getGeolocation();
 
-    // Cleanup the video stream when the component unmounts
-    return () => {
-      stopCurrentStream();
-    };
-  }, []);
+   
+  }, []); // Add stopCurrentStream as a dependency
 
   return (
     <div style={styles.container}>
@@ -128,7 +128,6 @@ const CameraCapture = () => {
         </div>
       )}
 
-      {/* Display the captured image below */}
       {capturedImage && (
         <div style={styles.imageContainer}>
           <h3>Captured Image:</h3>
@@ -147,6 +146,7 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     marginTop: '20px',
+    fontFamily: 'Arial, sans-serif',
   },
   videoWrapper: {
     position: 'relative',
